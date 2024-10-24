@@ -33,6 +33,7 @@ if (isset($_POST['login'])) {
             // เก็บข้อมูลลง session
             $_SESSION['username'] = $row['username'];
             $_SESSION['role'] = $row['role'];
+            $_SESSION['id'] = $user_id; // สมมติว่าคุณมีตัวแปร $user_id
             
             // ตรวจสอบบทบาท (role)
             if ($row['role'] === 'admin') {

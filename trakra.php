@@ -8,18 +8,102 @@ if (isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
+
+// ตั้งค่าการเชื่อมต่อฐานข้อมูล
+$host = 'localhost';
+$db = 'webdatabase'; // ชื่อฐานข้อมูล
+$user = 'root';
+$pass = '12345678';
+
+try {
+    // เชื่อมต่อกับฐานข้อมูล
+    $conn = new PDO("mysql:host=$host;dbname=$db", $user, $pass);
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // ดึง user_id จากชื่อผู้ใช้
+    $stmt = $conn->prepare("SELECT id FROM users WHERE username = :username");
+    $stmt->execute(['username' => $username]);
+    $user = $stmt->fetch();
+
+    if ($user) {
+        $user_id = $user['id']; // ใช้ id เป็น user_id
+    } else {
+        echo "ไม่พบผู้ใช้"; // ถ้าไม่พบผู้ใช้
+        exit();
+    }
+
+    // ลบสินค้าจากตะกร้า
+    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['remove_product_id'])) {
+        $remove_product_id = (int)$_POST['remove_product_id'];
+        // ลบรายการสินค้าออกจากตะกร้า
+        $stmt = $conn->prepare("DELETE FROM cart WHERE product_id = :product_id AND user_id = :user_id");
+        $stmt->execute(['product_id' => $remove_product_id, 'user_id' => $user_id]);
+    }
+
+    // เพิ่มสินค้าลงในตะกร้า
+    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['product_id'])) {
+        $product_id = (int)$_POST['product_id'];
+        $quantity = (int)$_POST['quantity'];
+
+        // ตรวจสอบว่าจำนวนสินค้ามากกว่า 0 หรือไม่
+        if ($quantity > 0) {
+            // ตรวจสอบว่ามีสินค้าในตะกร้าของผู้ใช้คนนี้แล้วหรือไม่
+            $stmt = $conn->prepare("SELECT * FROM cart WHERE product_id = :product_id AND user_id = :user_id");
+            $stmt->execute(['product_id' => $product_id, 'user_id' => $user_id]);
+            $item = $stmt->fetch();
+
+            if ($item) {
+                // อัปเดตจำนวนสินค้าในตะกร้า
+                $new_quantity = $item['quantity'] + $quantity;
+                $stmt = $conn->prepare("UPDATE cart SET quantity = :quantity WHERE product_id = :product_id AND user_id = :user_id");
+                $stmt->execute(['quantity' => $new_quantity, 'product_id' => $product_id, 'user_id' => $user_id]);
+            } else {
+                // เพิ่มสินค้าใหม่ลงในตะกร้า
+                $stmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity) VALUES (:user_id, :product_id, :quantity)");
+                $stmt->execute(['user_id' => $user_id, 'product_id' => $product_id, 'quantity' => $quantity]);
+            }
+        } else {
+            echo "จำนวนสินค้าต้องมากกว่า 0";
+        }
+    }
+
+    // ดึงรายการสินค้าทั้งหมดจากตาราง all_products
+    $stmt = $conn->query("SELECT * FROM all_products");
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ดึงรายการในตะกร้าของผู้ใช้
+    $stmt = $conn->prepare("SELECT cart.quantity, all_products.product_name, all_products.price, all_products.image_url, cart.product_id 
+                            FROM cart 
+                            JOIN all_products ON cart.product_id = all_products.product_id 
+                            WHERE cart.user_id = :user_id");
+    $stmt->execute(['user_id' => $user_id]);
+    $cart_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // คำนวณยอดรวมในตะกร้า
+    $subtotal = 0;
+    foreach ($cart_items as $item) {
+        $subtotal += $item['price'] * $item['quantity'];
+    }
+    $shipping = 50; // ค่าจัดส่ง
+    $total = $subtotal + $shipping;
+
+} catch (PDOException $e) {
+    echo "Database error: " . $e->getMessage();
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="utf-8">
+<meta charset="utf-8">
     <title>ka_jang_handmade</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="" name="keywords">
     <meta content="" name="description">
-
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
     <!-- Favicon -->
     <link href="img/favicon.ico" rel="icon">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -34,9 +118,15 @@ if (isset($_SESSION['username'])) {
         href="https://fonts.googleapis.com/css2?family=Mali:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap"
         rel="stylesheet">
 
+
     <!-- Icon Font Stylesheet -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link href="lib/animate/animate.min.css" rel="stylesheet">
+    <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+    <link href="lib/lightbox/css/lightbox.min.css" rel="stylesheet">
 
     <!-- Customized Bootstrap Stylesheet -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -46,18 +136,41 @@ if (isset($_SESSION['username'])) {
 </head>
 
 <body>
+    <!-- Spinner Start -->
+    <div id="spinner"
+        class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- Spinner End -->
+
+    <!-- Topbar Start -->
+    <div class="container-fluid bg-light p-0">
+        <div class="row gx-0 d-none d-lg-flex">
+            <div class="col-lg-7 px-5 text-start">
+                <div class="h-100 d-inline-flex align-items-center py-3 me-4">
+                    <small class="fa-solid fa-shop text-primary me-2"></small>
+                    <small>KAJANG🧶</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Topbar End -->
+
+
     <!-- Navbar Start -->
     <nav class="navbar navbar-expand-lg bg-white navbar-light sticky-top p-0">
         <a href="index.html" class="navbar-brand d-flex align-items-center px-4 px-lg-5">
-            <img src="img/logo-1.png" width="200px">   
+            <img src=img/logo-1.png width="200px">
         </a>
-        
         <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarCollapse">
             <div class="navbar-nav ms-auto p-4 p-lg-0">
                 <a href="user_dashboard.php" class="nav-item nav-link active"><i class="fa-solid fa-house me-2"></i>Home</a>
+                <a href="trakra.php" class="nav-item nav-link"><i class="bi bi-cart-fill"></i>  Shop</a>
                 <a href="meaning-of-flowers.html" class="nav-item nav-link"><i class="fa-solid fa-leaf me-2"></i>Meaning of Flowers</a>
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Our Shop</a>
@@ -68,6 +181,8 @@ if (isset($_SESSION['username'])) {
                     </div>
                 </div>
                 <a href="about.html" class="nav-item nav-link"><i class="fa-solid fa-user me-2"></i>About</a>
+                <a class="nav-item nav-link"><i class="bi bi-person-check-fill"></i> <?php echo htmlspecialchars($username); ?> </a>
+                <a href="Logout.php" class="nav-item nav-link"><i class="bi bi-box-arrow-right"></i> Logout</a>
             </div>
             <a href="https://www.instagram.com/ka_jang_handmade/"
                 class="btn btn-primary py-4 px-lg-5 d-none d-lg-block">Order Products<i
@@ -75,302 +190,119 @@ if (isset($_SESSION['username'])) {
         </div>
     </nav>
     <!-- Navbar End -->
-
-    <!-- Products Section Start -->
-    <div class="container-xxl py-3">
+    <style>
+        .team-item {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #fff;
+            transition: 0.3s;
+        }
+        .team-item:hover {
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .cart-item img {
+            width: 80px;
+            height: auto;
+        }
+        .cart-item h5 {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+   <!-- Products Section Start -->
+   <div class="container-xxl py-5">
         <div class="container">
             <div class="section-title text-start">
-                <h1 class="display-6 mb-5">เพิ่มลงกระตร้า เอ้ย!!!ตระกร้า</h1>
+                <h1 class="display-6 mb-5">Products</h1>
             </div>
             <div class="row g-4">
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.3s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-1/product-1.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">FLODUCKY</h5>
-                            <small>299 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('FLODUCKY', 299, 'img/flower/page-1/product-1.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.3s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/keychain/page-1/product-1.jpg" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Broccoli 🥦</h5>
-                            <small>59 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Broccoli', 59, 'img/keychain/page-1/product-1.jpg')">เพิ่มลงตะกร้า</button>
+                <?php foreach ($products as $product): ?>
+                    <div class="col-lg-3 col-md-6 wow fadeInUp">
+                        <div class="team-item">
+                            <div class="overflow-hidden position-relative rounded-3">
+                                <img class="img-fluid" src="<?php echo htmlspecialchars($product['image_url']); ?>" alt="<?php echo htmlspecialchars($product['product_name']); ?>">
+                            </div>
+                            <div class="text-center p-4">
+                                <h5 class="mb-0"><?php echo htmlspecialchars($product['product_name']); ?></h5>
+                                <small><?php echo htmlspecialchars($product['price']); ?> ฿</small><br><br>
+                                <form action="trakra.php" method="post">
+                                    <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
+                                    <input type="number" name="quantity" value="1" min="1" max="<?php echo $product['quantity_in_stock']; ?>" class="form-control mb-2" style="width: 100px; display: inline-block;">
+                                    <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-cart-plus"></i> Add to Cart</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.6s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-1/product-2.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Sunshine ☀️</h5>
-                            <small>299 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Sunshine', 299, 'img/flower/page-1/product-2.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-1/product-3.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Love Sampler</h5>
-                            <small>359 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Love Sampler', 359, 'img/flower/page-1/product-3.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-1/product-4.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Forgotmenot</h5>
-                            <small>129 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Forgotmenot', 129, 'img/flower/page-1/product-4.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-1/product-5.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Love Sun Blue 1</h5>
-                            <small>299 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Sun Blue', 299, 'img/flower/page-1/product-5.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-1/product-6.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Sweetie</h5>
-                            <small>229 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Sweetie', 229, 'img/flower/page-1/product-6.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-1/product-7.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Bunny Bunny</h5>
-                            <small>359 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Bunny Bunny', 299, 'img/flower/page-1/product-7.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-1/product-8.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Sun Blue 2</h5>
-                            <small>359 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Sun Blue 2', 299, 'img/flower/page-1/product-8.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-2/product-1.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Sunflower</h5>
-                            <small>129 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Sunflower', 129, 'img/flower/page-2/product-1.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-2/product-3.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Sunlit Memories</h5>
-                            <small>218 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Sunlit Memories', 218, 'img/flower/page-2/product-3.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-2/product-4.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Daisy 🌼</h5>
-                            <small>129 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Love Sampler', 129, 'img/flower/page-2/product-4.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/flower/page-2/product-5.png" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Tulips 🌷</h5>
-                            <small>79 ฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Tulips 🌷', 79, 'img/flower/page-2/product-5.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/keychain/page-1/product-2.jpg" alt="">
-                        </div>
-                        <div class="text-center border border-5 border-light border-top-0 p-4">
-                            <h5 class="mb-0">Moji</h5>
-                            <small>59฿</small><br><br>
-                            <button class="btn btn-primary mt-2" onclick="addToCart('Moji', 59, 'img/keychain/page-1/product-2.jpg')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/accessories/page-1/product-1.png" alt="">
-                        </div>
-                          <div class="text-center border border-5 border-light border-top-0 p-4">
-                          <h5 class="mb-0">Tulip twist</h5>
-                          <small>69 ฿</small><br><br>
-                          <button class="btn btn-primary mt-2" onclick="addToCart('Tulip twist', 69, 'img/accessories/page-1/product-1.png')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="team-item">
-                        <div class="overflow-hidden position-relative rounded-3">
-                            <img class="img-fluid" src="img/keychain/page-1/product-3.jpg" alt="">
-                        </div>
-                          <div class="text-center border border-5 border-light border-top-0 p-4">
-                          <h5 class="mb-0">Jellyfish</h5>
-                          <small>79 ฿</small><br><br>
-                          <button class="btn btn-primary mt-2" onclick="addToCart('Jellyfish', 79, 'img/keychain/page-1/product-3.jpg')">เพิ่มลงตะกร้า</button>
-                        </div>
-                    </div>
-                </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
     <!-- Products Section End -->
 
-    <!-- ตะกร้าสินค้า Start -->
-    <div class="container py-5">
-        <h1 class="display-5 mb-5 text-center">รายการสั่งซื้อและค่าเสียหาย</h1>
-        <div class="row">
-            <div class="col-lg-8">
-                <div id="cart-items"></div> <!-- แสดงรายการสินค้าที่เพิ่มลงในตะกร้า -->
-            </div>
-            <div class="col-lg-4">
-                <h5 class="mb-3">สรุปคำสั่งซื้อ</h5>
-                <ul class="list-group mb-3">
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>ยอดรวมสินค้า (Subtotal)</span>
-                        <strong id="subtotal">0 ฿</strong>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>ค่าจัดส่ง</span>
-                        <strong>50 ฿</strong>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>ยอดรวมทั้งหมด (Total)</span>
-                        <strong id="total">50 ฿</strong>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <!-- ตะกร้าสินค้า End -->
-
-    <script>
-        let cart = JSON.parse(localStorage.getItem('cart')) || [];
-
-        function addToCart(productName, price, image) {
-            const product = { name: productName, price: price, image: image };
-            cart.push(product);
-            localStorage.setItem('cart', JSON.stringify(cart));
-            updateCartUI();
-        }
-
-        function updateCartUI() {
-            const cartItemsContainer = document.getElementById('cart-items');
-            cartItemsContainer.innerHTML = '';
-            let subtotal = 0;
-
-            cart.forEach((product, index) => {
-                subtotal += product.price;
-                cartItemsContainer.innerHTML += `
-                    <div class="cart-item mb-4">
-                        <div class="d-flex align-items-center">
-                            <img src="${product.image}" alt="${product.name}" class="img-fluid" style="width: 150px;">
+    <!-- Cart Section Start -->
+<div class="container py-5">
+    <h1 class="display-5 mb-5 text-center">Your Cart</h1>
+    <div class="row">
+        <div class="col-lg-8">
+            <div id="cart-items">
+                <?php if (!empty($cart_items)): ?>
+                    <?php foreach ($cart_items as $item): ?>
+                        <div class="cart-item mb-4 d-flex align-items-center">
+                            <img src="<?php echo htmlspecialchars($item['image_url']); ?>" alt="<?php echo htmlspecialchars($item['product_name']); ?>" class="img-fluid">
                             <div class="ms-3">
-                                <h5 class="mb-1">${product.name}</h5>
-                                <small class="text-muted">ราคา: ${product.price} ฿</small>
+                                <h5><?php echo htmlspecialchars($item['product_name']); ?></h5>
+                                <small class="text-muted">Price: <?php echo htmlspecialchars($item['price']); ?> ฿</small><br>
+                                <small class="text-muted">Quantity: <?php echo $item['quantity']; ?></small>
                             </div>
                             <div class="ms-auto">
-                                <button class="btn btn-danger btn-sm" onclick="removeFromCart(${index})">ลบออก</button>
+                                <form action="" method="post" style="display:inline;">
+                                    <input type="hidden" name="remove_product_id" value="<?php echo $item['product_id']; ?>">
+                                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                </form>
                             </div>
                         </div>
-                    </div>
-                `;
-            });
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <p class="text-muted">Your cart is empty.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <h3 class="mb-4">Cart Summary</h3>
+            <div class="d-flex justify-content-between">
+                <h5>Subtotal:</h5>
+                <h5><?php echo htmlspecialchars($subtotal); ?> ฿</h5>
+            </div>
+            <div class="d-flex justify-content-between">
+                <h5>Shipping:</h5>
+                <h5><?php echo htmlspecialchars($shipping); ?> ฿</h5>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between">
+                <h5>Total:</h5>
+                <h5><?php echo htmlspecialchars($total); ?> ฿</h5>
+            </div>
+            <a href="checkout.php" class="btn btn-primary mt-4">Proceed to Checkout</a>
+        </div>
+    </div>
+</div>
+<!-- Cart Section End -->
 
-            document.getElementById('subtotal').textContent = subtotal + ' ฿';
-            document.getElementById('total').textContent = subtotal + 50 + ' ฿'; // บวกค่าจัดส่ง
-        }
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <!-- JavaScript Libraries -->
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="lib/wow/wow.min.js"></script>
+<script src="lib/easing/easing.min.js"></script>
+<script src="lib/waypoints/waypoints.min.js"></script>
+<script src="lib/counterup/counterup.min.js"></script>
+<script src="lib/owlcarousel/owl.carousel.min.js"></script>
+<script src="lib/isotope/isotope.pkgd.min.js"></script>
+<script src="lib/lightbox/js/lightbox.min.js"></script>
 
-        function removeFromCart(index) {
-            cart.splice(index, 1);
-            localStorage.setItem('cart', JSON.stringify(cart));
-            updateCartUI();
-        }
-
-        // Load cart items on page load
-        window.onload = updateCartUI;
-    </script>
-
-    <!-- JavaScript Libraries --> 
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Template Javascript -->
+<script src="js/main.js"></script>
 </body>
-
 </html>
