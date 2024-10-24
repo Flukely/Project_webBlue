@@ -87,10 +87,10 @@ if (isset($_SESSION['username'])) {
         <div class="collapse navbar-collapse" id="navbarCollapse">
             <div class="navbar-nav ms-auto p-4 p-lg-0">
                 <a href="index.html" class="nav-item nav-link active"><i class="fa-solid fa-house me-2"></i>Home</a>
-                <a href="trakra.html" class="nav-item nav-link"><i class="bi bi-cart-fill"></i>  Shop</a>
+                <a href="trakra.php" class="nav-item nav-link"><i class="bi bi-cart-fill"></i>  Shop</a>
                 <a href="meaning-of-flowers.html" class="nav-item nav-link"><i class="fa-solid fa-leaf me-2"></i>Meaning of Flowers</a>
                 <div class="nav-item dropdown">
-                    <a href="trakra.php" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Our Shop</a>
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Our Shop</a>
                     <div class="dropdown-menu fade-up m-0">
                         <a href="ourshop-flower-01.html" class="dropdown-item">Flower</a>
                         <a href="ourshop-accessories-01.html" class="dropdown-item">Accessorie</a>
