@@ -1,3 +1,14 @@
+<?php
+session_start();  // เริ่ม session
+
+// ตรวจสอบว่าผู้ใช้ได้ล็อกอินแล้วหรือยัง
+if (isset($_SESSION['username'])) {
+    $username = $_SESSION['username'];
+} else {
+    header("Location: login.php");
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -79,9 +90,9 @@
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Our Shop</a>
                     <div class="dropdown-menu fade-up m-0">
-                        <a href="ourshop-flower-01.html" class="dropdown-item">Flower</a>
-                        <a href="oourshop-accessories-01.html" class="dropdown-item">Accessorie</a>
-                        <a href="ourshop-keychain-01.html" class="dropdown-item">Keychain</a>
+                        <a href="ourshop-flower-01.php" class="dropdown-item">Flower</a>
+                        <a href="oourshop-accessories-01.php" class="dropdown-item">Accessorie</a>
+                        <a href="ourshop-keychain-01.php" class="dropdown-item">Keychain</a>
                     </div>
                 </div>
                 <a href="about.html" class="nav-item nav-link"><i class="fa-solid fa-user me-2"></i>About</a>

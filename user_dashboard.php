@@ -87,21 +87,21 @@ if (isset($_SESSION['username'])) {
             <div class="navbar-nav ms-auto p-4 p-lg-0">
                 <a href="user_dashboard.php" class="nav-item nav-link active"><i class="fa-solid fa-house me-2"></i>Home</a>
                 <a href="trakra.php" class="nav-item nav-link"><i class="bi bi-cart-fill"></i>  Shop</a>
-                <a href="meaning-of-flowers.html" class="nav-item nav-link"><i class="fa-solid fa-leaf me-2"></i>Meaning of Flowers</a>
+                <a href="meaning-of-flowers.php" class="nav-item nav-link"><i class="fa-solid fa-leaf me-2"></i>Meaning of Flowers</a>
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Our Shop</a>
                     <div class="dropdown-menu fade-up m-0">
-                        <a href="ourshop-flower-01.html" class="dropdown-item">Flower</a>
-                        <a href="ourshop-accessories-01.html" class="dropdown-item">Accessorie</a>
-                        <a href="ourshop-keychain-01.html" class="dropdown-item">Keychain</a>
+                        <a href="ourshop-flower-01.php" class="dropdown-item">Flower</a>
+                        <a href="ourshop-accessories-01.php" class="dropdown-item">Accessorie</a>
+                        <a href="ourshop-keychain-01.php" class="dropdown-item">Keychain</a>
                     </div>
                 </div>
-                <a href="about.html" class="nav-item nav-link"><i class="fa-solid fa-user me-2"></i>About</a>
+                <a href="about.php" class="nav-item nav-link"><i class="fa-solid fa-user me-2"></i>About</a>
                 <a class="nav-item nav-link"><i class="bi bi-person-check-fill"></i> <?php echo htmlspecialchars($username); ?> </a>
                 <a href="Logout.php" class="nav-item nav-link"><i class="bi bi-box-arrow-right"></i> Logout</a>
             </div>
             <a href="https://www.instagram.com/ka_jang_handmade/"
-                class="btn btn-primary py-4 px-lg-5 d-none d-lg-block">Order Products<i
+                class="btn btn-primary py-4 px-lg-5 d-none d-lg-block">Contact<i
                     class="fa fa-arrow-right ms-3"></i></a>
         </div>
     </nav>

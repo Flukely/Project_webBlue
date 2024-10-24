@@ -1,4 +1,15 @@
 <?php
+session_start();  // เริ่ม session
+
+// ตรวจสอบว่าผู้ใช้ได้ล็อกอินแล้วหรือยัง
+if (isset($_SESSION['username'])) {
+    $username = $_SESSION['username'];
+    $_SESSION['user_role'] = 'admin';
+    
+} else {
+    header("Location: login.php");
+    exit();
+}
 // เชื่อมต่อฐานข้อมูล
 $servername = "localhost";
 $username = "root";
@@ -93,155 +104,126 @@ if (isset($_GET['edit_id'])) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Management</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f8f8;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
+    <meta charset="utf-8">
+    <title>Admin Orders - ka_jang_handmade</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-        h1 {
-            text-align: center;
-            color: #d81b60;
-        }
-
-        h2 {
-            color: #d81b60;
-        }
-
-        form {
-            background-color: #fff;
-            border: 1px solid #d81b60;
-            border-radius: 5px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            width: 50%;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        input[type="file"] {
-            width: 95%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-
-        input[type="submit"] {
-            background-color: #d81b60;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        input[type="submit"]:hover {
-            background-color: #c2185b;
-        }
-
-        table {
-            width: 95%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        table, th, td {
-            border: 1px solid #d81b60;
-        }
-
-        th {
-            background-color: #d81b60;
-            color: white;
-            padding: 10px;
-        }
-
-        td {
-            padding: 3px;
-            text-align: center;
-        }
-
-        img {
-            max-width: 50px;
-            max-height: 50px;
-        }
-    </style>
+    <!-- Favicon -->
+    <link href="img/favicon.ico" rel="icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
 </head>
+
 <body>
+
+    <!-- Navbar Start -->
+    <nav class="navbar navbar-expand-lg bg-white navbar-light sticky-top p-0">
+        <a href="index.html" class="navbar-brand d-flex align-items-center px-4 px-lg-5">
+            <img src="img/logo-1.png" width="200px">
+        </a>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <div class="navbar-nav ms-auto p-4 p-lg-0">
+                <a href="stock.php" class="nav-item nav-link active"><i class="fa-solid fa-list me-2"></i>Stock</a>
+                <a href="Admin_dashboard.php" class="nav-item nav-link"><i class="fa-solid fa-house me-2"></i>Home</a>
+                <a href="Logout.php" class="nav-item nav-link"><i class="bi bi-box-arrow-right"></i> Logout</a>
+            </div>
+        </div>
+    </nav>
+    <!-- Navbar End -->
+
+     <br>
     <h1>Stock Management</h1>
     
-    <h2>Add Product</h2>
-    <form action="" method="POST" enctype="multipart/form-data">
-        <label>Product Name:</label>
-        <input type="text" name="product_name" required>
-        <label>Category:</label>
-        <input type="text" name="category" required>
-        <label>Price:</label>
-        <input type="number" name="price" step="0.01" required>
-        <label>Quantity:</label>
-        <input type="number" name="quantity" required>
-        <label>Image:</label>
-        <input type="file" name="image" accept="image/*">
-        <input type="submit" name="add_product" value="Add Product">
+    <div class="container mt-5">
+    <h2 class="mb-4">Add Product</h2>
+    <form action="" method="POST" enctype="multipart/form-data" class="mb-5">
+        <div class="mb-3">
+            <label for="product_name" class="form-label">Product Name:</label>
+            <input type="text" id="product_name" name="product_name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="category" class="form-label">Category:</label>
+            <input type="text" id="category" name="category" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="price" class="form-label">Price:</label>
+            <input type="number" id="price" name="price" class="form-control" step="0.01" required>
+        </div>
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Quantity:</label>
+            <input type="number" id="quantity" name="quantity" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="image" class="form-label">Image:</label>
+            <input type="file" id="image" name="image" class="form-control" accept="image/*">
+        </div>
+        <button type="submit" name="add_product" class="btn btn-success">Add Product</button>
     </form>
 
-    <h2>Remove Product</h2>
-    <form action="" method="POST">
-        <label>Product ID:</label>
-        <input type="number" name="product_id" required>
-        <input type="submit" name="remove_product" value="Remove Product">
+    <h2 class="mb-4">Remove Product</h2>
+    <form action="" method="POST" class="mb-5">
+        <div class="mb-3">
+            <label for="product_id_remove" class="form-label">Product ID:</label>
+            <input type="number" id="product_id_remove" name="product_id" class="form-control" required>
+        </div>
+        <button type="submit" name="remove_product" class="btn btn-danger">Remove Product</button>
     </form>
 
-    <h2>Edit Product</h2>
+    <h2 class="mb-4">Edit Product</h2>
     <?php if ($product_to_edit): ?>
-    <form action="" method="POST" enctype="multipart/form-data">
+    <form action="" method="POST" enctype="multipart/form-data" class="mb-5">
         <input type="hidden" name="product_id" value="<?php echo $product_to_edit['product_id']; ?>">
         <input type="hidden" name="current_image" value="<?php echo $product_to_edit['image_url']; ?>">
-        <label>Product Name:</label>
-        <input type="text" name="product_name" value="<?php echo $product_to_edit['product_name']; ?>" required>
-        <label>Category:</label>
-        <input type="text" name="category" value="<?php echo $product_to_edit['category']; ?>" required>
-        <label>Price:</label>
-        <input type="number" name="price" step="0.01" value="<?php echo $product_to_edit['price']; ?>" required>
-        <label>Quantity:</label>
-        <input type="number" name="quantity" value="<?php echo $product_to_edit['quantity_in_stock']; ?>" required>
-        <label>Image:</label>
-        <input type="file" name="image" accept="image/*">
-        <input type="submit" name="edit_product" value="Update Product">
+        <div class="mb-3">
+            <label for="edit_product_name" class="form-label">Product Name:</label>
+            <input type="text" id="edit_product_name" name="product_name" class="form-control" value="<?php echo $product_to_edit['product_name']; ?>" required>
+        </div>
+        <div class="mb-3">
+            <label for="edit_category" class="form-label">Category:</label>
+            <input type="text" id="edit_category" name="category" class="form-control" value="<?php echo $product_to_edit['category']; ?>" required>
+        </div>
+        <div class="mb-3">
+            <label for="edit_price" class="form-label">Price:</label>
+            <input type="number" id="edit_price" name="price" class="form-control" step="0.01" value="<?php echo $product_to_edit['price']; ?>" required>
+        </div>
+        <div class="mb-3">
+            <label for="edit_quantity" class="form-label">Quantity:</label>
+            <input type="number" id="edit_quantity" name="quantity" class="form-control" value="<?php echo $product_to_edit['quantity_in_stock']; ?>" required>
+        </div>
+        <div class="mb-3">
+            <label for="edit_image" class="form-label">Image:</label>
+            <input type="file" id="edit_image" name="image" class="form-control" accept="image/*">
+        </div>
+        <button type="submit" name="edit_product" class="btn btn-primary">Update Product</button>
     </form>
     <?php else: ?>
-    <form action="" method="GET">
-        <label>Product ID:</label>
-        <input type="number" name="edit_id" required>
-        <input type="submit" value="Edit Product">
+    <form action="" method="GET" class="mb-5">
+        <div class="mb-3">
+            <label for="edit_id" class="form-label">Product ID:</label>
+            <input type="number" id="edit_id" name="edit_id" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-warning">Edit Product</button>
     </form>
     <?php endif; ?>
+</div>
     
-    <h2>Current Stock</h2>
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Price</th>
-            <th>Quantity</th>
-            <th>Image</th>
-        </tr>
+<div class="container mt-5">
+    <h2 class="mb-4">Current Stock</h2>
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Image</th>
+            </tr>
+        </thead>
+        <tbody>
         <?php
         // Fetch and display products
         $sql = "SELECT * FROM all_products";
@@ -255,16 +237,30 @@ if (isset($_GET['edit_id'])) {
                         <td>{$row['category']}</td>
                         <td>{$row['price']}</td>
                         <td>{$row['quantity_in_stock']}</td>
-                        <td><img src='{$row['image_url']}' alt='{$row['product_name']}'></td>
+                        <td><img src='{$row['image_url']}' alt='{$row['product_name']}' style='width: 50px;'></td>
                       </tr>";
             }
         } else {
             echo "<tr><td colspan='6'>No products found</td></tr>";
         }
-
-        // ปิดการเชื่อมต่อ
-        $conn->close();
         ?>
+        </tbody>
     </table>
+</div>
+
+    
+    <!-- JavaScript Libraries -->
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="lib/wow/wow.min.js"></script>
+<script src="lib/easing/easing.min.js"></script>
+<script src="lib/waypoints/waypoints.min.js"></script>
+<script src="lib/counterup/counterup.min.js"></script>
+<script src="lib/owlcarousel/owl.carousel.min.js"></script>
+<script src="lib/isotope/isotope.pkgd.min.js"></script>
+<script src="lib/lightbox/js/lightbox.min.js"></script>
+
+<!-- Template Javascript -->
+<script src="js/main.js"></script>
 </body>
 </html>

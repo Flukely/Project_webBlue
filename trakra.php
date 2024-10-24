@@ -284,7 +284,7 @@ try {
                 <h5>Total:</h5>
                 <h5><?php echo htmlspecialchars($total); ?> ฿</h5>
             </div>
-            <a href="checkout.php" class="btn btn-primary mt-4">Proceed to Checkout</a>
+            <a href="user_order.php" class="btn btn-primary mt-4">Proceed to Checkout</a>
         </div>
     </div>
 </div>
